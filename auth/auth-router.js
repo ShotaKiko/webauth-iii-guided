@@ -4,6 +4,20 @@ const jwt = require('jsonwebtoken')
 
 const Users = require('../users/users-model.js');
 
+function generateToken(user) {
+  const payload = {
+    userId: user.id,
+    userRole: 'student',
+  };
+  const secret = 'mitochondria are the powerhouses of the cell';
+
+  const options = {
+    expiresIn:'1h'
+  };
+
+  return jwt.sign(payload, secret, options)
+}
+
 // for endpoints beginning with /api/auth
 router.post('/register', (req, res) => {
   let user = req.body;
@@ -12,7 +26,12 @@ router.post('/register', (req, res) => {
 
   Users.add(user)
     .then(saved => {
-      res.status(201).json(saved);
+      const token = generateToken(saved)
+      
+      res.status(201).json({
+        message: `Welcome ${saved.username}!`,
+        authToken: token
+      });
     })
     .catch(error => {
       res.status(500).json(error);
@@ -26,21 +45,14 @@ router.post('/login', (req, res) => {
     .first()
     .then(user => {
       if (user && bcrypt.compareSync(password, user.password)) {
-        jwt.sign({ 
-          userId: user.Id,
-
-        }, 'super secret', (err, token) => {
-          if (err){
-            res.status(401)
-          } else{
-            
-          }
-        })
+        const token = generateToken(user)
+        
         res.status(200).json({
           message: `Welcome ${user.username}!`,
-        });
+          authToken: token
+        })
       } else {
-        res.status(401).json({ message: 'Invalid Credentials' });
+        res.status(401).json({ message: 'Invalid creds.' })
       }
     })
     .catch(error => {
